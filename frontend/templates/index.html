@@ -19,6 +19,7 @@
                 hx-post="/api/recipes"
                 hx-target="#results"
                 hx-swap="innerHTML"
+                hx-indicator="#loading-indicator"
                 class="recipe-form"
             >
                 <label for="ingredients">Składniki</label>
@@ -40,6 +41,9 @@
 
                 <button type="submit">Generuj przepisy</button>
             </form>
+            <div id="loading-indicator" class="loading-indicator" aria-live="polite">
+                🤖 Sztuczna inteligencja myśli, jak Cię nakarmić...
+            </div>
         </section>
 
         <section id="results" class="results">

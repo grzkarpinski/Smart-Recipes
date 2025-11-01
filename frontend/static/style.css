@@ -94,3 +94,15 @@ body {
     margin-top: 0;
     margin-bottom: 0.75rem;
 }
+
+.loading-indicator {
+    display: none;
+    margin-top: 1rem;
+    text-align: center;
+    color: #4c51bf;
+    font-weight: 600;
+}
+
+.loading-indicator.htmx-request {
+    display: block;
+}
