@@ -6,13 +6,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from api.recipes import router as recipes_router
-
-load_dotenv()
+from backend.api.recipes import router as recipes_router
 
 APP_DIR = Path(__file__).parent
-TEMPLATE_DIR = APP_DIR / "templates"
-STATIC_DIR = APP_DIR / "static"
+load_dotenv(APP_DIR / ".env")
+FRONTEND_DIR = APP_DIR.parent / "frontend"
+TEMPLATE_DIR = FRONTEND_DIR / "templates"
+STATIC_DIR = FRONTEND_DIR / "static"
 
 app = FastAPI(title="Smart Recipes")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
