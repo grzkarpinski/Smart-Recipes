@@ -1,10 +1,17 @@
 {% if error %}
 <div class="alert">{{ error }}</div>
 {% elif recipes %}
-<ul class="recipe-list">
+<ul class="recipe-list recipe-grid">
     {% for recipe in recipes %}
     <li class="recipe-card">
-        <h2>{{ recipe.title }}</h2>
+        <h2>
+            {% if loop.index == 1 %}
+            Pierwsza propozycja MasterChefa AI:
+            {% elif loop.index == 2 %}
+            Druga propozycja MasterChefa AI:
+            {% endif %}
+            {{ recipe.title }}
+        </h2>
         {% if recipe.body %}
         <p>{{ recipe.body | replace('\n', '<br>') | safe }}</p>
         {% endif %}

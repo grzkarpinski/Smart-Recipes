@@ -1,5 +1,7 @@
 import asyncio
+import json
 import os
+import re
 from functools import lru_cache
 from typing import List, Dict
 
@@ -51,31 +53,55 @@ class OpenAIRecipeService:
     def _build_prompt(self, ingredients: str, dietary_filter: str) -> str:
         filter_fragment = f"Uwzględnij filtr: {dietary_filter}." if dietary_filter else ""
         return (
-            "Podaj 3 krótkie przepisy zawierające listę kroków i wskazówki serwowania. "
-            "Zwróć wyniki w formacie: 'Nazwa przepisu' w pierwszej linii, a następnie kolejne linie"
-            " z opisem, składnikami dodatkowymi i instrukcjami. "
-            f"Składniki startowe: {ingredients}. {filter_fragment}"
+            "Przygotuj dokładnie 2 przepisy kulinarne. Każdy powinien zawierać nazwę, krótki opis,"
+            " listę dodatkowych składników oraz instrukcje krok po kroku."
+            f" Składniki startowe: {ingredients}. {filter_fragment}"
+            " Zwróć odpowiedź wyłącznie jako JSON w formacie:"
+            " [{\"title\": str, \"body\": str}, ...]."
+            " Pole 'body' powinno być sformatowane w Markdownie z nagłówkami i listami, jeśli to pomocne."
+            " Nie dodawaj żadnego innego tekstu poza JSON."
         )
 
     def _parse_response(self, raw_text: str) -> List[Dict[str, str]]:
         if not raw_text:
             raise RecipeServiceError("Model nie zwrócił treści przepisu.")
 
-        blocks = [block.strip() for block in raw_text.split("\n\n") if block.strip()]
-        results: List[Dict[str, str]] = []
+        text = raw_text.strip()
 
-        for block in blocks:
-            lines = [line.strip() for line in block.splitlines() if line.strip()]
-            if not lines:
+        if text.startswith("```"):
+            text = text.strip("`")
+            if text.lower().startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            match = re.search(r"\[\s*{.*?}\s*\]", raw_text, re.DOTALL)
+            if not match:
+                raise RecipeServiceError("Nie udało się odczytać odpowiedzi modelu (niepoprawny JSON).")
+            try:
+                payload = json.loads(match.group(0))
+            except json.JSONDecodeError as exc:
+                raise RecipeServiceError("Nie udało się odczytać odpowiedzi modelu (niepoprawny JSON).") from exc
+
+        if not isinstance(payload, list):
+            raise RecipeServiceError("Odpowiedź modelu ma nieoczekiwany format.")
+
+        normalized: List[Dict[str, str]] = []
+        for item in payload:
+            if not isinstance(item, dict):
                 continue
-            title = lines[0].lstrip("0123456789. ").strip()
-            body = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
-            results.append({"title": title, "body": body})
+            title = str(item.get("title", "")).strip()
+            body = str(item.get("body", "")).strip()
+            if not title:
+                continue
+            normalized.append({"title": title, "body": body})
 
-        if not results:
-            raise RecipeServiceError("Nie udało się sparsować odpowiedzi modelu.")
+        if len(normalized) < 2:
+            raise RecipeServiceError("Model zwrócił zbyt mało przepisów.")
 
-        return results
+        return normalized[:2]
 
 
 @lru_cache
